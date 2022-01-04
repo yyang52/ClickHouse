@@ -713,6 +713,81 @@ TEST_F(TestMapArray, BuildingStringToInt) {
   ASSERT_ARRAYS_EQUAL(*actual, expected);
 }
 
+TEST_F(TestMapArray, BuildingWithFieldNames) {
+  // Builder should preserve field names in output Array
+  ASSERT_OK_AND_ASSIGN(auto map_type,
+                       MapType::Make(field("some_entries",
+                                           struct_({field("some_key", int16(), false),
+                                                    field("some_value", int16())}),
+                                           false)));
+
+  auto key_builder = std::make_shared<Int16Builder>();
+  auto item_builder = std::make_shared<Int16Builder>();
+  MapBuilder map_builder(default_memory_pool(), key_builder, item_builder, map_type);
+
+  std::shared_ptr<Array> actual;
+  ASSERT_OK(map_builder.Append());
+  ASSERT_OK(key_builder->AppendValues({0, 1, 2, 3, 4, 5}));
+  ASSERT_OK(item_builder->AppendValues({1, 1, 2, 3, 5, 8}));
+  ASSERT_OK(map_builder.AppendNull());
+  ASSERT_OK(map_builder.Finish(&actual));
+  ASSERT_OK(actual->ValidateFull());
+
+  ASSERT_EQ(actual->type()->ToString(), map_type->ToString());
+  ASSERT_EQ(map_builder.type()->ToString(), map_type->ToString());
+}
+
+TEST_F(TestMapArray, ValidateErrorNullStruct) {
+  ASSERT_OK_AND_ASSIGN(
+      auto values,
+      MakeArrayOfNull(struct_({field("key", utf8()), field("value", int32())}), 1));
+
+  Int32Builder offset_builder;
+  ASSERT_OK(offset_builder.AppendNull());
+  ASSERT_OK(offset_builder.Append(0));
+  ASSERT_OK_AND_ASSIGN(auto offsets, offset_builder.Finish());
+
+  ASSERT_OK_AND_ASSIGN(auto lists, ListArray::FromArrays(*offsets, *values));
+  ASSERT_OK(lists->ValidateFull());
+  ASSERT_EQ(lists->length(), 1);
+  ASSERT_EQ(lists->null_count(), 1);
+
+  // Make a Map ArrayData from the list array
+  // Note we can't construct a MapArray as that would crash with an assertion.
+  auto map_data = lists->data()->Copy();
+  map_data->type = map(utf8(), int32());
+  ASSERT_RAISES(Invalid, internal::ValidateArray(*map_data));
+}
+
+TEST_F(TestMapArray, ValidateErrorNullKey) {
+  StringBuilder key_builder;
+  ASSERT_OK(key_builder.AppendNull());
+  ASSERT_OK_AND_ASSIGN(auto keys, key_builder.Finish());
+
+  Int32Builder item_builder;
+  ASSERT_OK(item_builder.Append(42));
+  ASSERT_OK_AND_ASSIGN(auto items, item_builder.Finish());
+
+  ASSERT_OK_AND_ASSIGN(
+      auto values,
+      StructArray::Make({keys, items}, std::vector<std::string>{"key", "value"}));
+
+  Int32Builder offset_builder;
+  ASSERT_OK(offset_builder.Append(0));
+  ASSERT_OK(offset_builder.Append(1));
+  ASSERT_OK_AND_ASSIGN(auto offsets, offset_builder.Finish());
+
+  // The list array contains: [[null, 42]]
+  ASSERT_OK_AND_ASSIGN(auto lists, ListArray::FromArrays(*offsets, *values));
+  ASSERT_OK(lists->ValidateFull());
+
+  // Make a Map ArrayData from the list array
+  // Note we can't construct a MapArray as that would crash with an assertion.
+  auto map_data = lists->data()->Copy();
+  map_data->type = map(keys->type(), items->type());
+  ASSERT_RAISES(Invalid, internal::ValidateArray(*map_data));
+}
+
 TEST_F(TestMapArray, FromArrays) {
   std::shared_ptr<Array> offsets1, offsets2, offsets3, offsets4, keys, items;
 
