@@ -49,6 +49,9 @@ class ARROW_EXPORT ORCFileReader {
   ARROW_DEPRECATED("Deprecated in 6.0.0. Use Result-returning overload instead.")
   static Status Open(const std::shared_ptr<io::RandomAccessFile>& file, MemoryPool* pool,
                      std::unique_ptr<ORCFileReader>* reader);
+ 
+  /// \brief Get ORC reader from inside.
+  liborc::Reader* GetRawORCReader();
 
   /// \brief Creates a new ORC reader
   ///
