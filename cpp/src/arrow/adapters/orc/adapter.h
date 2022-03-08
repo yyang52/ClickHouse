@@ -29,6 +29,7 @@
 #include "arrow/type_fwd.h"
 #include "arrow/util/macros.h"
 #include "arrow/util/visibility.h"
+#include "arrow/adapters/orc/adapter_util.h"
 
 namespace arrow {
 namespace adapters {

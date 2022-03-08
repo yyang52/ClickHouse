@@ -444,10 +444,6 @@ class ORCFileReader::Impl {
     return Status::OK();
   }
 
-  liborc::Reader* ORCFileReader::GetRawORCReader() {
-    return impl_->GetRawORCReader();
-  }
-
   Status NextStripeReader(int64_t batch_size, std::shared_ptr<RecordBatchReader>* out) {
     return NextStripeReader(batch_size, {}, out);
   }
@@ -462,6 +458,10 @@ class ORCFileReader::Impl {
 ORCFileReader::ORCFileReader() { impl_.reset(new ORCFileReader::Impl()); }
 
 ORCFileReader::~ORCFileReader() {}
+
+liborc::Reader* ORCFileReader::GetRawORCReader() {
+  return impl_->GetRawORCReader();
+}
 
 Status ORCFileReader::Open(const std::shared_ptr<io::RandomAccessFile>& file,
                            MemoryPool* pool, std::unique_ptr<ORCFileReader>* reader) {
