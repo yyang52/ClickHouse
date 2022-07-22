@@ -373,7 +373,7 @@ class ARROW_EXPORT ThreadPool : public Executor {
   State* state_;
   bool shutdown_on_destroy_;
 #ifndef _WIN32
-  pid_t pid_;
+  std::atomic<pid_t> pid_;
 #endif
 };
 
