@@ -18,6 +18,7 @@
 #include "arrow/util/mutex.h"
 
 #include <mutex>
+#include <pthread.h>
 
 #include "arrow/util/logging.h"
 
