@@ -18,7 +18,11 @@
 #include "arrow/util/mutex.h"
 
 #include <mutex>
+
+#ifndef _WIN32
 #include <pthread.h>
+#include <atomic>
+#endif
 
 #include "arrow/util/logging.h"
 
