@@ -222,7 +222,7 @@ ThreadPool::ThreadPool()
     : sp_state_(std::make_shared<ThreadPool::State>()),
       state_(sp_state_.get()),
       shutdown_on_destroy_(true) {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__ppc64__)
   pid_ = getpid();
 #endif
 }
@@ -234,7 +234,7 @@ ThreadPool::~ThreadPool() {
 }
 
 void ThreadPool::ProtectAgainstFork() {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__ppc64__)
   pid_t current_pid = getpid();
   if (pid_.load() != current_pid) {
     // Reinitialize internal state in child process after fork().
