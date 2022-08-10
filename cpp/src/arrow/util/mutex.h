@@ -60,7 +60,7 @@ class ARROW_EXPORT Mutex {
   std::unique_ptr<Impl, void (*)(Impl*)> impl_;
 };
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__ppc64__)
 /// Return a pointer to a process-wide, process-specific Mutex that can be used
 /// at any point in a child process.  NULL is returned when called in the parent.
 ///

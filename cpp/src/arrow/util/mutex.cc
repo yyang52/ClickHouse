@@ -19,7 +19,7 @@
 
 #include <mutex>
 
-#ifndef _WIN32
+#if !defined( _WIN32) && !defined(__ppc64__)
 #include <pthread.h>
 #include <atomic>
 #endif
@@ -55,7 +55,7 @@ Mutex::Guard Mutex::Lock() {
 
 Mutex::Mutex() : impl_(new Impl, [](Impl* impl) { delete impl; }) {}
 
-#ifndef _WIN32
+#if !defined( _WIN32) && !defined(__ppc64__)
 namespace {
 
 struct AfterForkState {
@@ -102,7 +102,7 @@ Mutex* GlobalForkSafeMutex() {
 
   return AfterForkState::instance.mutex;
 }
-#endif  // _WIN32
+#endif  // _WIN32 and __ppc64__
 
 }  // namespace util
 }  // namespace arrow
