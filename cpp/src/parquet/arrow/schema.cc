@@ -31,7 +31,6 @@
 #include "arrow/util/key_value_metadata.h"
 #include "arrow/util/logging.h"
 #include "arrow/util/value_parsing.h"
-
 #include "parquet/arrow/schema_internal.h"
 #include "parquet/exception.h"
 #include "parquet/metadata.h"
@@ -351,11 +350,15 @@ Status FieldToNode(const std::string& name, const std::shared_ptr<Field>& field,
     } break;
     case ArrowTypeId::DECIMAL128:
     case ArrowTypeId::DECIMAL256: {
-      type = ParquetType::FIXED_LEN_BYTE_ARRAY;
       const auto& decimal_type = static_cast<const ::arrow::DecimalType&>(*field->type());
       precision = decimal_type.precision();
       scale = decimal_type.scale();
-      length = DecimalType::DecimalSize(precision);
+      if (properties.integer_annotate_decimal() && 1 <= precision && precision <= 18) {
+        type = precision <= 9 ? ParquetType ::INT32 : ParquetType ::INT64;
+      } else {
+        type = ParquetType::FIXED_LEN_BYTE_ARRAY;
+        length = DecimalType::DecimalSize(precision);
+      }
       PARQUET_CATCH_NOT_OK(logical_type = LogicalType::Decimal(precision, scale));
     } break;
     case ArrowTypeId::DATE32:

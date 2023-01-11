@@ -129,22 +129,14 @@ template <typename ArrowType>
   return builder.Finish(out);
 }
 
+template <int32_t byte_width>
 static void random_decimals(int64_t n, uint32_t seed, int32_t precision, uint8_t* out) {
-  std::default_random_engine gen(seed);
-  std::uniform_int_distribution<uint32_t> d(0, std::numeric_limits<uint8_t>::max());
-  const int32_t required_bytes = ::arrow::DecimalType::DecimalSize(precision);
-  int32_t byte_width = precision <= 38 ? 16 : 32;
-  std::fill(out, out + byte_width * n, '\0');
-
-  for (int64_t i = 0; i < n; ++i, out += byte_width) {
-    std::generate(out, out + required_bytes,
-                  [&d, &gen] { return static_cast<uint8_t>(d(gen)); });
-
-    // sign extend if the sign bit is set for the last byte generated
-    // 0b10000000 == 0x80 == 128
-    if ((out[required_bytes - 1] & '\x80') != 0) {
-      std::fill(out + required_bytes, out + byte_width, '\xFF');
-    }
+  auto gen = ::arrow::random::RandomArrayGenerator(seed);
+  std::shared_ptr<Array> decimals;
+  if constexpr (byte_width == 16) {
+    decimals = gen.Decimal128(::arrow::decimal128(precision, 0), n);
+  } else {
+    decimals = gen.Decimal256(::arrow::decimal256(precision, 0), n);
   }
 }
 
@@ -163,7 +155,8 @@ NonNullArray(size_t size, std::shared_ptr<Array>* out) {
   constexpr int32_t seed = 0;
 
   ARROW_ASSIGN_OR_RAISE(auto out_buf, ::arrow::AllocateBuffer(size * byte_width));
-  random_decimals(size, seed, kDecimalPrecision, out_buf->mutable_data());
+  random_decimals<::arrow::Decimal128Type::kByteWidth>(size, seed, kDecimalPrecision,
+                                                       out_buf->mutable_data());
 
   RETURN_NOT_OK(builder.AppendValues(out_buf->data(), size));
   return builder.Finish(out);
@@ -184,7 +177,8 @@ NonNullArray(size_t size, std::shared_ptr<Array>* out) {
   constexpr int32_t seed = 0;
 
   ARROW_ASSIGN_OR_RAISE(auto out_buf, ::arrow::AllocateBuffer(size * byte_width));
-  random_decimals(size, seed, kDecimalPrecision, out_buf->mutable_data());
+  random_decimals<::arrow::Decimal256Type::kByteWidth>(size, seed, kDecimalPrecision,
+                                                       out_buf->mutable_data());
 
   RETURN_NOT_OK(builder.AppendValues(out_buf->data(), size));
   return builder.Finish(out);
@@ -346,7 +340,8 @@ NullableArray(size_t size, size_t num_nulls, uint32_t seed,
 
   ARROW_ASSIGN_OR_RAISE(auto out_buf, ::arrow::AllocateBuffer(size * byte_width));
 
-  random_decimals(size, seed, precision, out_buf->mutable_data());
+  random_decimals<::arrow::Decimal128Type::kByteWidth>(size, seed, precision,
+                                                       out_buf->mutable_data());
 
   ::arrow::Decimal128Builder builder(type);
   RETURN_NOT_OK(builder.AppendValues(out_buf->data(), size, valid_bytes.data()));
@@ -372,7 +367,8 @@ NullableArray(size_t size, size_t num_nulls, uint32_t seed,
 
   ARROW_ASSIGN_OR_RAISE(auto out_buf, ::arrow::AllocateBuffer(size * byte_width));
 
-  random_decimals(size, seed, precision, out_buf->mutable_data());
+  random_decimals<::arrow::Decimal256Type::kByteWidth>(size, seed, precision,
+                                                       out_buf->mutable_data());
 
   ::arrow::Decimal256Builder builder(type);
   RETURN_NOT_OK(builder.AppendValues(out_buf->data(), size, valid_bytes.data()));

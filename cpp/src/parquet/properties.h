@@ -168,7 +168,8 @@ class PARQUET_EXPORT WriterProperties {
           pagesize_(kDefaultDataPageSize),
           version_(ParquetVersion::PARQUET_1_0),
           data_page_version_(ParquetDataPageVersion::V1),
-          created_by_(DEFAULT_CREATED_BY) {}
+          created_by_(DEFAULT_CREATED_BY),
+          integer_annotate_decimal_(false) {}
     virtual ~Builder() {}
 
     Builder* memory_pool(MemoryPool* pool) {
@@ -385,6 +386,24 @@ class PARQUET_EXPORT WriterProperties {
       return this->disable_statistics(path->ToDotString());
     }
 
+    /// Enable integer type to annotate decimal type as below:
+    ///   int32: 1 <= precision <= 9
+    ///   int64: 10 <= precision <= 18
+    /// Default disabled.
+    Builder* enable_integer_annotate_decimal() {
+      integer_annotate_decimal_ = true;
+      return this;
+    }
+
+    /// Disable integer type to annotate decimal type.
+    /// Default disabled.
+    Builder* disable_integer_annotate_decimal() {
+      integer_annotate_decimal_ = false;
+      return this;
+    }
+
+    /// \brief Build the WriterProperties with the builder parameters.
+    /// \return The WriterProperties defined by the builder.
     std::shared_ptr<WriterProperties> build() {
       std::unordered_map<std::string, ColumnProperties> column_properties;
       auto get = [&](const std::string& key) -> ColumnProperties& {
@@ -407,7 +426,8 @@ class PARQUET_EXPORT WriterProperties {
       return std::shared_ptr<WriterProperties>(new WriterProperties(
           pool_, dictionary_pagesize_limit_, write_batch_size_, max_row_group_length_,
           pagesize_, version_, created_by_, std::move(file_encryption_properties_),
-          default_column_properties_, column_properties, data_page_version_));
+          default_column_properties_, column_properties, data_page_version_,
+          integer_annotate_decimal_));
     }
 
    private:
@@ -419,6 +439,7 @@ class PARQUET_EXPORT WriterProperties {
     ParquetVersion::type version_;
     ParquetDataPageVersion data_page_version_;
     std::string created_by_;
+    bool integer_annotate_decimal_;
 
     std::shared_ptr<FileEncryptionProperties> file_encryption_properties_;
 
@@ -448,6 +469,8 @@ class PARQUET_EXPORT WriterProperties {
   inline ParquetVersion::type version() const { return parquet_version_; }
 
   inline std::string created_by() const { return parquet_created_by_; }
+
+  inline bool integer_annotate_decimal() const { return integer_annotate_decimal_; }
 
   inline Encoding::type dictionary_index_encoding() const {
     if (parquet_version_ == ParquetVersion::PARQUET_1_0) {
@@ -517,7 +540,7 @@ class PARQUET_EXPORT WriterProperties {
       std::shared_ptr<FileEncryptionProperties> file_encryption_properties,
       const ColumnProperties& default_column_properties,
       const std::unordered_map<std::string, ColumnProperties>& column_properties,
-      ParquetDataPageVersion data_page_version)
+      ParquetDataPageVersion data_page_version, bool integer_annotate_decimal)
       : pool_(pool),
         dictionary_pagesize_limit_(dictionary_pagesize_limit),
         write_batch_size_(write_batch_size),
@@ -526,6 +549,7 @@ class PARQUET_EXPORT WriterProperties {
         parquet_data_page_version_(data_page_version),
         parquet_version_(version),
         parquet_created_by_(created_by),
+        integer_annotate_decimal_(integer_annotate_decimal),
         file_encryption_properties_(file_encryption_properties),
         default_column_properties_(default_column_properties),
         column_properties_(column_properties) {}
@@ -538,6 +562,7 @@ class PARQUET_EXPORT WriterProperties {
   ParquetDataPageVersion parquet_data_page_version_;
   ParquetVersion::type parquet_version_;
   std::string parquet_created_by_;
+  bool integer_annotate_decimal_;
 
   std::shared_ptr<FileEncryptionProperties> file_encryption_properties_;
 
