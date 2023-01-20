@@ -22,6 +22,7 @@
 #endif
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 
 #ifdef ARROW_USE_GLOG
 
@@ -63,26 +64,25 @@ class CerrLog {
  public:
   explicit CerrLog(ArrowLogLevel severity) : severity_(severity), has_logged_(false) {}
 
-  virtual ~CerrLog() {
+  virtual ~CerrLog() noexcept(false) {
     if (has_logged_) {
-      std::cerr << std::endl;
+      stream << std::endl;
     }
     if (severity_ == ArrowLogLevel::ARROW_FATAL) {
-      PrintBackTrace();
-      std::abort();
+      throw std::runtime_error(stream.str());
     }
   }
 
   std::ostream& Stream() {
     has_logged_ = true;
-    return std::cerr;
+    return stream;
   }
 
   template <class T>
   CerrLog& operator<<(const T& t) {
     if (severity_ != ArrowLogLevel::ARROW_DEBUG) {
       has_logged_ = true;
-      std::cerr << t;
+      stream << t;
     }
     return *this;
   }
@@ -90,6 +90,7 @@ class CerrLog {
  protected:
   const ArrowLogLevel severity_;
   bool has_logged_;
+  std::stringstream stream;
 
   void PrintBackTrace() {
 #ifdef ARROW_WITH_BACKTRACE
@@ -245,7 +246,7 @@ std::ostream& ArrowLog::Stream() {
 
 bool ArrowLog::IsEnabled() const { return is_enabled_; }
 
-ArrowLog::~ArrowLog() {
+ArrowLog::~ArrowLog() noexcept(false) {
   if (logging_provider_ != nullptr) {
     delete reinterpret_cast<LoggingProvider*>(logging_provider_);
     logging_provider_ = nullptr;
