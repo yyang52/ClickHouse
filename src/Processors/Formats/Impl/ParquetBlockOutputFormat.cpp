@@ -94,6 +94,7 @@ void ParquetBlockOutputFormat::consume(Chunk chunk)
         parquet::WriterProperties::Builder builder;
         builder.version(getParquetVersion(format_settings));
         builder.compression(getParquetCompression(format_settings.parquet.output_compression_method));
+        builder.enable_integer_annotate_decimal();
         auto props = builder.build();
         auto status = parquet::arrow::FileWriter::Open(
             *arrow_table->schema(),
