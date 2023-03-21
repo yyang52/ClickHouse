@@ -188,6 +188,7 @@ IMPLEMENT_SETTING_ENUM(ParquetCompression, ErrorCodes::BAD_ARGUMENTS,
      {"zstd", FormatSettings::ParquetCompression::ZSTD},
      {"gzip", FormatSettings::ParquetCompression::GZIP},
      {"lz4", FormatSettings::ParquetCompression::LZ4},
+     {"qpl", FormatSettings::ParquetCompression::QPL},
      {"brotli", FormatSettings::ParquetCompression::BROTLI}})
 
 IMPLEMENT_SETTING_ENUM(ArrowCompression, ErrorCodes::BAD_ARGUMENTS,

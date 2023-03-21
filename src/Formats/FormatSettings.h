@@ -199,6 +199,7 @@ struct FormatSettings
         LZ4,
         GZIP,
         BROTLI,
+        QPL,
     };
 
     struct

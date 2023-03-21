@@ -375,6 +375,8 @@ SET(ARROW_SRCS "${LIBRARY_DIR}/util/compression_zstd.cc" ${ARROW_SRCS})
 add_definitions(-DARROW_WITH_BROTLI)
 SET(ARROW_SRCS "${LIBRARY_DIR}/util/compression_brotli.cc" ${ARROW_SRCS})
 
+add_definitions(-DARROW_WITH_QPL)
+SET(ARROW_SRCS "${LIBRARY_DIR}/util/compression_qpl.cc" ${ARROW_SRCS})
 
 add_library(_arrow ${ARROW_SRCS})
 
@@ -390,6 +392,7 @@ target_link_libraries(_arrow PRIVATE
     ch_contrib::zlib
     ch_contrib::zstd
     ch_contrib::brotli
+    ch_contrib::qpl
 )
 target_link_libraries(_arrow PUBLIC _orc)
 

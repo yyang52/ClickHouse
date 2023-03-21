@@ -59,6 +59,9 @@ parquet::Compression::type getParquetCompression(FormatSettings::ParquetCompress
     if (method == FormatSettings::ParquetCompression::GZIP)
         return parquet::Compression::type::GZIP;
 
+    if (method == FormatSettings::ParquetCompression::QPL)
+        return parquet::Compression::type::QPL;
+
     throw Exception(ErrorCodes::NOT_IMPLEMENTED, "Unsupported compression method");
 }
 
