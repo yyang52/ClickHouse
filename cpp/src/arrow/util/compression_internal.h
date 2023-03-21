@@ -75,6 +75,20 @@ constexpr int kZSTDDefaultCompressionLevel = 1;
 std::unique_ptr<Codec> MakeZSTDCodec(
     int compression_level = kZSTDDefaultCompressionLevel);
 
+// QPL Deflate
+constexpr int kQPLDefaultCompressionLevel = 1;
+
+struct QPLPath{
+  enum type{
+    AUTO,
+    HARDWARE,
+    SOFTWARE
+  };
+};
+
+std::unique_ptr<Codec> MakeQPLCodec(int compression_level = kQPLDefaultCompressionLevel,
+                                    QPLPath::type epath = QPLPath::SOFTWARE );
+
 }  // namespace internal
 }  // namespace util
 }  // namespace arrow

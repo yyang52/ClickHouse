@@ -66,6 +66,7 @@ set(ARROW_THIRDPARTY_DEPENDENCIES
     ORC
     re2
     Protobuf
+    QPL
     RapidJSON
     Snappy
     Thrift
@@ -164,6 +165,8 @@ macro(build_dependency DEPENDENCY_NAME)
     build_orc()
   elseif("${DEPENDENCY_NAME}" STREQUAL "Protobuf")
     build_protobuf()
+  elseif("${DEPENDENCY_NAME}" STREQUAL "QPL")
+    build_qpl()
   elseif("${DEPENDENCY_NAME}" STREQUAL "RapidJSON")
     build_rapidjson()
   elseif("${DEPENDENCY_NAME}" STREQUAL "re2")
@@ -555,6 +558,14 @@ else()
   set_urls(PROTOBUF_SOURCE_URL
            "https://github.com/protocolbuffers/protobuf/releases/download/${ARROW_PROTOBUF_BUILD_VERSION}/protobuf-all-${ARROW_PROTOBUF_STRIPPED_BUILD_VERSION}.tar.gz"
            "https://github.com/ursa-labs/thirdparty/releases/download/latest/protobuf-${ARROW_PROTOBUF_BUILD_VERSION}.tar.gz"
+  )
+endif()
+
+if(DEFINED ENV{ARROW_QPL_URL})
+  set(QPL_SOURCE_URL "$ENV{ARROW_QPL_URL}")
+else()
+  set_urls(QPL_SOURCE_URL
+           "https://github.com/intel/qpl/archive/refs/tags/${ARROW_QPL_BUILD_VERSION}.tar.gz"
   )
 endif()
 
@@ -2185,6 +2196,81 @@ if(ARROW_WITH_ZSTD)
   get_target_property(ZSTD_INCLUDE_DIR ${ARROW_ZSTD_LIBZSTD}
                       INTERFACE_INCLUDE_DIRECTORIES)
   include_directories(SYSTEM ${ZSTD_INCLUDE_DIR})
+endif()
+
+macro(build_qpl)
+  message(STATUS "Building QPL from source")
+  set(QPL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/qpl_ep-install")
+
+  set(EP_CXX_FLAGS  "${EP_CXX_FLAGS} -ldl -laccel-config -L/usr/lib") 
+
+  set(QPL_CMAKE_ARGS
+      ${EP_COMMON_TOOLCHAIN}
+      "-DCMAKE_INSTALL_PREFIX=${QPL_PREFIX}"
+      -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+      -DQPL_BUILD_TESTS=off
+      -DEFFICIENT_WAIT=on)
+
+  if(MSVC)
+    set(QPL_STATIC_LIB "${QPL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/qpl_static.lib")
+  else()
+    set(QPL_STATIC_LIB "${QPL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libqpl.a")
+    set(QPL_CMAKE_ARGS
+        ${QPL_CMAKE_ARGS}
+        -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+        -DCMAKE_C_FLAGS=${EP_C_FLAGS}
+        -DCMAKE_CXX_FLAGS=${EP_CXX_FLAGS})
+  endif()
+
+  externalproject_add(qpl_ep
+                      ${EP_LOG_OPTIONS}
+                      CMAKE_ARGS ${QPL_CMAKE_ARGS}
+                      INSTALL_DIR ${QPL_PREFIX}
+                      URL ${QPL_SOURCE_URL}
+                      URL_HASH "SHA256=${ARROW_QPL_BUILD_SHA256_CHECKSUM}"
+                      BUILD_BYPRODUCTS "${QPL_STATIC_LIB}")
+
+  file(MAKE_DIRECTORY "${QPL_PREFIX}/include")
+
+  add_library(qpl::qpl STATIC IMPORTED)
+  target_link_libraries(qpl::qpl INTERFACE /usr/lib/libaccel-config.so)
+  set_target_properties(qpl::qpl
+                        PROPERTIES IMPORTED_LOCATION "${QPL_STATIC_LIB}"
+                                   INTERFACE_INCLUDE_DIRECTORIES "${QPL_PREFIX}/include")
+
+  add_dependencies(toolchain qpl_ep)
+  add_dependencies(qpl::qpl qpl_ep)
+
+  list(APPEND ARROW_BUNDLED_STATIC_LIBS qpl::qpl)
+endmacro()
+
+if(ARROW_WITH_QPL)
+  resolve_dependency(QPL
+                     PC_PACKAGE_NAMES
+                     qpl)
+
+  if(TARGET qpl::qpl)
+    set(ARROW_QPL_LIBQPL qpl::qpl)
+  else()
+    # "SYSTEM" source will prioritize cmake config, which exports
+    # qpl::qpl_{static,shared}
+    if(ARROW_QPL_USE_SHARED)
+      if(TARGET qpl::qpl_shared)
+        set(ARROW_QPL_LIBQPL qpl::qpl_shared)
+      endif()
+    else()
+      if(TARGET qpl::qpl_static)
+        set(ARROW_QPL_LIBQPL qpl::qpl_static)
+      endif()
+    endif()
+  endif()
+
+  # TODO: Don't use global includes but rather target_include_directories
+  get_target_property(QPL_INCLUDE_DIR ${ARROW_QPL_LIBQPL}
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${QPL_INCLUDE_DIR})
 endif()
 
 # ----------------------------------------------------------------------

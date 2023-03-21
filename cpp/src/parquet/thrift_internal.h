@@ -107,6 +107,8 @@ static inline Compression::type FromThriftUnsafe(format::CompressionCodec::type 
       return Compression::LZ4;
     case format::CompressionCodec::ZSTD:
       return Compression::ZSTD;
+    case format::CompressionCodec::QPL:
+      return Compression::QPL;
     default:
       DCHECK(false) << "Cannot reach here";
       return Compression::UNCOMPRESSED;
@@ -216,7 +218,7 @@ inline typename Compression::type LoadEnumSafe(const format::CompressionCodec::t
   const auto min_value =
       static_cast<decltype(raw_value)>(format::CompressionCodec::UNCOMPRESSED);
   const auto max_value =
-      static_cast<decltype(raw_value)>(format::CompressionCodec::LZ4_RAW);
+      static_cast<decltype(raw_value)>(format::CompressionCodec::QPL);
   if (raw_value < min_value || raw_value > max_value) {
     return Compression::UNCOMPRESSED;
   }
@@ -293,6 +295,8 @@ static inline format::CompressionCodec::type ToThrift(Compression::type type) {
       return format::CompressionCodec::LZ4;
     case Compression::ZSTD:
       return format::CompressionCodec::ZSTD;
+    case Compression::QPL:
+      return format::CompressionCodec::QPL;
     default:
       DCHECK(false) << "Cannot reach here";
       return format::CompressionCodec::UNCOMPRESSED;
